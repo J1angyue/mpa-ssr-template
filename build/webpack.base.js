@@ -4,23 +4,35 @@ const { CleanWebpackPlugin } = require('clean-webpack-plugin')
 const CssMinimizerPlugin = require('css-minimizer-webpack-plugin')
 const FriendlyErrorsWebpackPlugin = require('friendly-errors-webpack-plugin')
 const MiniCssExtractPlugin = require('mini-css-extract-plugin')
+const AddAssetHtmlPlugin = require('add-asset-html-webpack-plugin')
+const { DllReferencePlugin } = require('webpack')
 
-const { resolve } = require('./helpers')
+const { resolve, join, renderType } = require('./helpers')
 const createMPAConfig = require('./createMPAConfig')
+const isProd = process.env.NODE_ENV === 'production'
 
 const baseConfig = {
+  mode: process.env.NODE_ENV || 'development',
   stats: 'errors-only',
+  resolve: {
+    modules: [resolve('node_modules')]
+  },
   output: {
+    hashDigestLength: 8,
     path: resolve('dist'),
-    publicPath: '/'
+    publicPath: '/',
+    filename: renderType + '/js/[name]' + (isProd ? '.[contenthash]' : '') + '.js',
+    chunkFilename: renderType + '/js/' + (isProd ? '[name].[chunkhash]' : '[id]') + '.js'
   },
   module: {
     rules: [
       {
         test: /\.(le|c)ss$/,
         use: [
-          MiniCssExtractPlugin.loader,
-          // 'vue-style-loader',
+          isProd
+            ? MiniCssExtractPlugin.loader
+            : 'vue-style-loader',
+          // 'thread-loader',
           'css-loader',
           'postcss-loader',
           {
@@ -35,19 +47,37 @@ const baseConfig = {
       },
       {
         test: /\.vue$/,
-        use: 'vue-loader'
+        use: [
+          // 'thread-loader',
+          'vue-loader'
+        ]
       },
       {
         test: /\.js$/,
-        use: 'babel-loader'
+        use: [
+          // 'thread-loader',
+          'babel-loader'
+        ],
+        exclude: resolve('node_modules')
       },
       {
-        test: /\.(jpe?g|gif|png|ttf|woff2?)$/,
+        test: /\.(jpe?g|gif|png)$/,
         use: {
           loader: 'url-loader',
           options: {
             limit: 1024 * 10,
-            name: 'static/[name].[hash:8].[ext]'
+            name: renderType + '/img/[name].[contenthash:8].[ext]'
+          }
+        }
+      }
+      ,
+      {
+        test: /\.(ttf|woff2?)$/,
+        use: {
+          loader: 'url-loader',
+          options: {
+            limit: 1024 * 10,
+            name: renderType + '/font/[name].[contenthash:8].[ext]'
           }
         }
       }
@@ -59,14 +89,18 @@ const baseConfig = {
     new FriendlyErrorsWebpackPlugin(),
     new CssMinimizerPlugin(),
     new MiniCssExtractPlugin({
-      filename: 'css/[name].[contenthash:8].css',
-      chunkFilename: 'css/[name].[contenthash:8].css'
+      filename: renderType + '/css/[name].[contenthash:8].css',
+      chunkFilename: renderType + '/css/[name].[contenthash:8].css'
+    }),
+    new DllReferencePlugin({
+      manifest: require(resolve('dll/vuelibs.manifest.json'))
+    }),
+    new AddAssetHtmlPlugin({
+      filepath: join('dll', '*.js'),
+      publicPath: '/' + renderType + '/js',
+      outputPath: renderType + '/js'
     })
   ]
 }
 
-function createBaseConfig(entryType) {
-  return merge(baseConfig, createMPAConfig(entryType))
-}
-
-module.exports = createBaseConfig
+module.exports = merge(baseConfig, createMPAConfig(renderType))

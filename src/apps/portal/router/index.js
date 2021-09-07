@@ -6,8 +6,8 @@ import {
 import routes from './routes'
 
 const history = typeof window === 'undefined'
-  ? createMemoryHistory()
-  : createWebHistory()
+  ? createMemoryHistory('/server/portal')
+  : createWebHistory('/client/portal')
 
 export default function () {
   return createRouter({ history, routes })

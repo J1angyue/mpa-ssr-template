@@ -1,5 +1,6 @@
 <template>
-  <div class="now">{{ now }}</div>
+  <div class="now">Portal.APP.vue</div>
+  <router-view></router-view>
 </template>
 
 <script>
@@ -12,8 +13,12 @@ export default {
 }
 </script>
 
-<style lang="less">
+<style scoped lang="less">
 .now {
   color: green;
+}
+
+.unused {
+  color: blue;
 }
 </style>

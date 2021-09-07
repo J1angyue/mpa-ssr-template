@@ -1,15 +1,7 @@
-const fs = require('fs')
-
-
 const HTMLWebpackPlugin = require('html-webpack-plugin')
+const { apps } = require('./helpers')
+
 // const HTMLWebpackExternalsPlugin = require('html-webpack-externals-plugin')
-const { resolve } = require('./helpers')
-
-const isProd = process.env.NODE_ENV === 'production'
-const ENTRY_TYPE = {
-  CLIENT: 'client', SERVER: 'server'
-}
-
 // const externals = [
 //   {
 //     module: 'vue',
@@ -28,37 +20,23 @@ const ENTRY_TYPE = {
 //   }
 // ]
 
-const APPS_PATH = resolve('src/apps')
-
-function createMPAConfig(entryType = ENTRY_TYPE.CLIENT) {
+function createMPAConfig(renderType) {
   const plugins = []
-  const entry = {}
-  const apps = fs.readdirSync(APPS_PATH)
-  const output = {
-    filename: entryType + '/js/[name]' + (isProd ? '.[contenthash:8]' : '') + '.js',
-    chunkFilename: entryType + '/js/' + (isProd ? '[id].[contenthash:8]' : '[id]') + '.js'
-  }
+  const entrys = {}
 
-  for (const appName of apps) {
-    const appDir = APPS_PATH + '/' + appName
-    const template = appDir + '/index.html'
-    const appEntry = appDir + '/entry.' + entryType + '.js'
-
-    if (
-      !fs.existsSync(appEntry) || !fs.existsSync(template)
-    ) {
-      continue
-    }
-
-    entry[appName] = appEntry
-    const templateFileName = entryType + '/' + appName + '/index.html'
+  for (const { name, template, entry } of apps) {
+    entrys[name] = entry
     plugins.push(
       new HTMLWebpackPlugin({
         template,
-        chunks: [appName],
+        chunks: [name],
+        filename: renderType + '/' + name + '/index.html',
         inject: 'body',
-        filename: templateFileName,
-        minify: true
+        minify: {
+          minifyJS: true,
+          removeComments: true,
+          collapseWhitespace: true,
+        }
       })
       // new HTMLWebpackExternalsPlugin({
       //   externals,
@@ -68,7 +46,7 @@ function createMPAConfig(entryType = ENTRY_TYPE.CLIENT) {
     )
   }
 
-  return { plugins, entry, output }
+  return { plugins, entry: entrys }
 }
 
 module.exports = createMPAConfig
